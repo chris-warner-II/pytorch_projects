@@ -33,7 +33,7 @@ class NeuralNet(nn.Module):
 use_tensorboard = False
 use_wandb = True
 
-which_dataset = 'KMNIST' # 'KMNIST', 'QMNIST'
+which_dataset = 'QMNIST' # 'MNIST' or 'KMNIST' or 'QMNIST'.
 
 # hyperparameters
 input_size = 28*28 # images dims flattened.
@@ -84,7 +84,6 @@ if use_tensorboard:
 
 # wandb
 if use_wandb:
-	#wandb.login()	
 	#
 	config = dict(
 		input_size=input_size, 
@@ -97,16 +96,11 @@ if use_wandb:
 	wandb.init(project=f'ffwd_{which_dataset}', config=config)
 
 
-
-
-
 # Send images to tensorboard.
 if use_tensorboard: 
 	img_grid = torchvision.utils.make_grid(samples)
-	writer.add_image('MNIST_images',img_grid)
+	writer.add_image(f'{which_dataset}_images',img_grid)
 
-
-#set_trace()
 
 
 model = NeuralNet(input_size, hidden_size, num_classes).to(device)
@@ -117,7 +111,8 @@ optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
 
 # Send model graph to tensorboard
-if use_tensorboard: writer.add_graph(model, samples.reshape(-1,28*28))
+if use_tensorboard: 
+	writer.add_graph(model, samples.reshape(-1,28*28))
 
 
 
