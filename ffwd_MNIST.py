@@ -33,6 +33,7 @@ class NeuralNet(nn.Module):
 use_tensorboard = False
 use_wandb = True
 
+which_dataset = 'KMNIST' # 'KMNIST', 'QMNIST'
 
 # hyperparameters
 input_size = 28*28 # images dims flattened.
@@ -48,8 +49,19 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 # Load in torchvision dataset: 	(to try: MNIST, KMNIST, QMNIST) (for CNNs: CIFAR10, FashionMNIST, ImageNet)
-train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform = transforms.ToTensor(), download=True)
-test_dataset = torchvision.datasets.MNIST(root='./data', train=False, transform = transforms.ToTensor(), download=True)
+if which_dataset=='MNIST':
+	train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform = transforms.ToTensor(), download=True)
+	test_dataset = torchvision.datasets.MNIST(root='./data', train=False, transform = transforms.ToTensor(), download=True)
+elif which_dataset=='KMNIST':
+	train_dataset = torchvision.datasets.KMNIST(root='./data', train=True, transform = transforms.ToTensor(), download=True)
+	test_dataset = torchvision.datasets.KMNIST(root='./data', train=False, transform = transforms.ToTensor(), download=True)
+elif which_dataset=='QMNIST':
+	train_dataset = torchvision.datasets.QMNIST(root='./data', train=True, transform = transforms.ToTensor(), download=True)
+	test_dataset = torchvision.datasets.QMNIST(root='./data', train=False, transform = transforms.ToTensor(), download=True)	
+else:
+	print('Dont understand Dataset.')
+
+
 
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
@@ -67,7 +79,7 @@ for i in range(6):
 
 # tensorboard
 if use_tensorboard: 
-	writer = SummaryWriter(f'runs/QMNIST')
+	writer = SummaryWriter(f'runs/{which_dataset}')
 
 
 # wandb
@@ -82,7 +94,7 @@ if use_wandb:
 		batch_size=batch_size,
 		learning_rate=learning_rate)
 	#
-	wandb.init(project='ffwd_MNIST', config=config)
+	wandb.init(project=f'ffwd_{which_dataset}', config=config)
 
 
 
