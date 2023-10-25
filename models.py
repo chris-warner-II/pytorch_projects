@@ -57,3 +57,29 @@ class LinearRegressionModelV0(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.linear_layer1(x)
+
+class LinearRegressionModelV1(nn.Module):
+    """
+    A Linear Regression model with 3 linear layers (input, hidden & output) and pointwise
+    output non-linearities after input and hidden layers.
+    """
+    def __init__(self,in_dim, hid_dim, nl_type):
+        super().__init__()
+        self.linear_layer1 = nn.Linear(in_features=in_dim, out_features=hid_dim)
+        self.linear_layer2 = nn.Linear(in_features=hid_dim, out_features=hid_dim)
+        self.linear_layer3 = nn.Linear(in_features=hid_dim, out_features=1)
+
+        if nl_type == 'sigmoid':
+            self.nl = nn.Sigmoid()
+        elif nl_type == 'relu':
+            self.nl = nn.ReLU()
+        elif nl_type == 'tanh':
+            self.nl = nn.Tanh()
+        else:
+            raise NameError('nl_type')
+
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.nl( self.linear_layer1(x) )
+        z = self.nl( self.linear_layer2(z) )
+        return self.linear_layer3(z)
