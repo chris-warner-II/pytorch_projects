@@ -3,6 +3,66 @@
 import torch
 from torch import nn
 
+from helper_functions import accuracy_fn
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+def train_step_bin_classification(data, labels, model, loss_fn, optimizer):
+    """
+
+    :param data:
+    :param labels:
+    :param model:
+    :param loss_fn:
+    :param optimizer:
+    :return: loss, acc
+    """
+    model.train()
+
+    y_logit = model(data)
+    y_prob = torch.sigmoid(y_logit)
+    y_pred = torch.round(y_prob)
+
+    loss = loss_fn(y_logit, labels)
+
+    optimizer.zero_grad()
+
+    loss.backward()
+
+    optimizer.step()
+
+    acc = accuracy_fn(y_pred, labels)
+
+    return loss, acc
+
+
+def test_step_bin_classification(data, labels, model, loss_fn):
+    """
+
+    :param data:
+    :param labels:
+    :param model:
+    :param loss_fn:
+    :return:
+    """
+
+    model.eval()
+
+    with torch.inference_mode():
+        y_logit = model(data)
+
+    y_prob = torch.sigmoid(y_logit)
+    y_pred = torch.round(y_prob)
+
+    loss = loss_fn(y_logit, labels)
+
+    acc = accuracy_fn(y_pred, labels)
+
+    return loss, acc
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 def train_step_regression(data, labels, model, loss_fn, optimizer):
     """
@@ -23,7 +83,7 @@ def train_step_regression(data, labels, model, loss_fn, optimizer):
     loss.backward()
     optimizer.step()
 
-    return(loss)
+    return loss
 
 
 def test_step_regression(data, labels, model, loss_fn):
@@ -41,9 +101,9 @@ def test_step_regression(data, labels, model, loss_fn):
 
     loss = loss_fn(preds, labels)
 
-    return(loss)
+    return loss
 
-
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 class LinearRegressionModelV0(nn.Module):
     """
