@@ -31,7 +31,7 @@ def plot_predictions(train_data,
     plt.legend(prop={"size": 14})
 
 
-def plot_loss(epoch, loss, test_loss=None,y_scale='linear'):
+def plot_loss(epoch, loss, test_loss=None, acc=None, test_acc=None, y_scale='linear'):
     """
     Plot training loss and test loss against epoch during training loop.
     :param epoch:
@@ -41,10 +41,16 @@ def plot_loss(epoch, loss, test_loss=None,y_scale='linear'):
     :return: None
     """
     plt.figure(figsize=(10,7))
-    plt.plot(epoch, loss, c='b', label='Train')
+    plt.plot(epoch, loss, c='b', linestyle='-', label='Train Loss')
     if test_loss is not None:
-        plt.plot(epoch, test_loss, c='r', label='Test')
+        plt.plot(epoch, test_loss, c='r', linestyle='-', label='Test Loss')
+    if acc is not None:
+        plt.plot(epoch, acc, c='b', linestyle='--', label='Train Accuracy')
+    if test_acc is not None:
+        plt.plot(epoch, test_acc, c='r', linestyle='--', label='Test Accuracy')
     plt.yscale(y_scale)
+    plt.ylabel('Loss | Accuracy')
+    plt.xlabel('Training Epoch')
     plt.legend(prop={"size": 14})
 
 
@@ -59,14 +65,20 @@ def accuracy_fn(label_pred, label_true):
     return correct / len(label_true)
 
 
-def scatter_2class(train_data, train_labels, test_data, test_labels):
+def scatter_2D_class(train_data, train_labels, test_data, test_labels):
     """
+    This function makes scatter plots of 2D data (one for test data, one for train data) color
+    coding the data by the train_labels and test_labels. This is a data visualization for
+    multi-class classification.
 
-    :param train_data:
-    :param train_labels:
-    :param test_data:
-    :param test_labels:
-    :return:
+    Args:
+        train_data:
+        train_labels:
+        test_data:
+        test_labels:
+
+    Returns:
+        Null
     """
     # Plot loss
     plt.figure(figsize=(12, 6))

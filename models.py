@@ -2,8 +2,68 @@
 
 import torch
 from torch import nn
+from torch.nn import functional as f
 
 from helper_functions import accuracy_fn
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+def train_step_multi_classification(data, labels, model, loss_fn, optimizer):
+    """
+
+    :param data:
+    :param labels:
+    :param model:
+    :param loss_fn:
+    :param optimizer:
+    :return: loss, acc
+    """
+
+    model.train()
+
+    y_logits = model(data)
+
+    loss = loss_fn(y_logits, labels)
+
+    optimizer.zero_grad()
+
+    loss.backward()
+
+    optimizer.step()
+
+    y_prob = f.softmax(y_logits, dim=1)
+    y_pred = torch.argmax(y_prob, dim=1)
+
+    acc = accuracy_fn(y_pred,labels)
+
+
+    return loss, acc
+
+
+def test_step_multi_classification(data, labels, model, loss_fn):
+    """
+
+    :param data:
+    :param labels:
+    :param model:
+    :param loss_fn:
+    :return:
+    """
+
+    model.eval()
+
+    with torch.inference_mode():
+        y_logits = model(data)
+
+    loss = loss_fn(y_logits, labels)
+
+    y_prob = f.softmax(y_logits, dim=1)
+    y_pred = torch.argmax(y_prob, dim=1)
+
+    acc = accuracy_fn(y_pred, labels)
+
+    return loss, acc
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -103,6 +163,22 @@ def test_step_regression(data, labels, model, loss_fn):
 
     return loss
 
+def nonlin_type(nonlin_str):
+
+    if nonlin_str is None:
+        nonlin = nn.Identity()
+    elif nonlin_str == 'relu':
+        nonlin = nn.ReLU()
+    elif nonlin_str == 'sigmoid':
+        nonlin = nn.Sigmoid()
+    elif nonlin_str == 'tanh':
+        nonlin = nn.Tanh()
+    else:
+        print(f"Dont recognize nonlinearity {nonlin_str}. Setting nonlin to nn.Identity")
+        nonlin = nonlin = nn.Identity()
+
+    return nonlin
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 class LinearRegressionModelV0(nn.Module):
@@ -143,3 +219,31 @@ class LinearRegressionModelV1(nn.Module):
         z = self.nl( self.linear_layer1(x) )
         z = self.nl( self.linear_layer2(z) )
         return self.linear_layer3(z)
+
+
+class MultiClassificationModelV0(nn.Module):
+    def __init__(self, input_features, output_features, hidden_units=8, nonlin=None):
+        """
+        Initializes Model for Multi-class Classification.
+
+        Args:
+            input_features (int): number input features to model
+            output_features (int): number input features to model (number of output classes)
+            hidden_units (int): number of hidden units between layers, default 8
+
+        Returns:
+
+        Example:
+
+        """
+        super().__init__()
+        self.linear_layer_stack = nn.Sequential(
+            nn.Linear(in_features=input_features, out_features=hidden_units),
+            nonlin_type(nonlin),
+            nn.Linear(in_features=hidden_units, out_features=hidden_units),
+            nonlin_type(nonlin),
+            nn.Linear(in_features=hidden_units, out_features=output_features),
+        )
+
+    def forward(self, x):
+        return self.linear_layer_stack(x)
