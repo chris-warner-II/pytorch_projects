@@ -80,6 +80,11 @@ def scatter_2D_class(train_data, train_labels, test_data, test_labels):
     Returns:
         Null
     """
+
+    # Put all data on cpu for plotting.
+    train_data, train_labels = train_data.to("cpu"), train_labels.to("cpu")
+    test_data, test_labels = test_data.to("cpu"), test_labels.to("cpu")
+
     # Plot loss
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)

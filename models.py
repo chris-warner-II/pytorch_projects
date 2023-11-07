@@ -2,7 +2,6 @@
 
 import torch
 from torch import nn
-from torch.nn import functional as f
 
 from helper_functions import accuracy_fn
 
@@ -26,12 +25,10 @@ def train_step_multi_classification(data, labels, model, loss_fn, optimizer):
     loss = loss_fn(y_logits, labels)
 
     optimizer.zero_grad()
-
     loss.backward()
-
     optimizer.step()
 
-    y_prob = f.softmax(y_logits, dim=1)
+    y_prob = torch.softmax(y_logits, dim=1)
     y_pred = torch.argmax(y_prob, dim=1)
 
     acc = accuracy_fn(y_pred,labels)
@@ -57,7 +54,7 @@ def test_step_multi_classification(data, labels, model, loss_fn):
 
     loss = loss_fn(y_logits, labels)
 
-    y_prob = f.softmax(y_logits, dim=1)
+    y_prob = torch.softmax(y_logits, dim=1)
     y_pred = torch.argmax(y_prob, dim=1)
 
     acc = accuracy_fn(y_pred, labels)
