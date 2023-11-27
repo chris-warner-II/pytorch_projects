@@ -11,36 +11,50 @@ def plot_predictions(train_data,
                      test_labels,
                      predictions=None):
     """
-    Function to plot training and test data vs. labels for linear regression dataset
-    as well as test data vs. model predictions.
+    For Linear Regression, creates scatter plot of 1D data (independent variable) vs. 1D labels (dependent variable) .
+        Plots a). training data v. label,
+              b). test data v. label, and
+              c). test data vs model predictions (if provided).
 
-    :param train_data:
-    :param train_labels:
-    :param test_data:
-    :param test_labels:
-    :param predictions:
-    :return: None
+    :args:
+        :train_data:   1D vector of independent variables (X's) in training data
+        :train_labels: 1D vector of dependent variables (y's) in training data
+        :test_data:    1D vector of independent variables (X's) in test data
+        :test_labels:  1D vector of dependent variables (y's) in test data
+        :predictions:  1D vector of model predictions (y's) for test data
+
+    :returns: None
     """
-    plt.figure(figsize=(10, 7))
+
+    # Put all data on cpu for plotting - Device Agnostic Code.
+    train_data, train_labels = train_data.to("cpu"), train_labels.to("cpu")
+    test_data, test_labels = test_data.to("cpu"), test_labels.to("cpu")
+    if predictions is not None:
+        predictions = predictions.to("cpu")
+
     plt.scatter(train_data, train_labels, c='b', s=15, label="Train")
     plt.scatter(test_data, test_labels, c='g', s=15, label="Test")
     plt.xlabel('Data')
     plt.ylabel('Label')
     if predictions is not None:
-        plt.scatter(test_data, predictions, c='r', s=15, marker='x', label="Predictions")
-    plt.legend(prop={"size": 14})
+        plt.scatter(test_data, predictions, c='r', s=15, marker='x', label="Preds")
+    plt.legend(prop={"size": 8})
+
 
 
 def plot_loss(epoch, loss, test_loss=None, acc=None, test_acc=None, y_scale='linear'):
     """
     Plot training loss and test loss against epoch during training loop.
-    :param epoch:
-    :param loss:
-    :param test_loss:
-    :param y_scale
+
+    :args:
+        :epoch: 1D vector of training epoch on x-axis
+        :loss: 1D vector of training loss on y-axis
+        :test_loss: 1D vector of loss on test data on y-axis
+        :y_scale: 'linear' or 'log' for scale of y-axis
+
     :return: None
     """
-    plt.figure(figsize=(10,7))
+
     plt.plot(epoch, loss, c='b', linestyle='-', label='Train Loss')
     if test_loss is not None:
         plt.plot(epoch, test_loss, c='r', linestyle='-', label='Test Loss')
@@ -56,10 +70,14 @@ def plot_loss(epoch, loss, test_loss=None, acc=None, test_acc=None, y_scale='lin
 
 def accuracy_fn(label_pred, label_true):
     """
-    Compute accuracy from binary classification task.
-    :param label_pred:
-    :param label_true:
-    :return: accuracy
+    Compute accuracy for binary classification task.
+        Accuracy = (# correct predictions) / (# total predictions)
+    :args:
+        :label_pred: - model predicted labels
+        :label_true: - ground truth labels
+
+    :return:
+        :accuracy: - fraction of model predictions that match ground truth
     """
     correct = (label_pred == label_true).sum()
     return correct / len(label_true)
@@ -67,32 +85,30 @@ def accuracy_fn(label_pred, label_true):
 
 def scatter_2D_class(train_data, train_labels, test_data, test_labels):
     """
-    This function makes scatter plots of 2D data (one for test data, one for train data) color
-    coding the data by the train_labels and test_labels. This is a data visualization for
-    multi-class classification.
+    For multi-class classification, make two scatter subplots of 2D data
+    (one for test data, one for train data) color coding the data by different classes.
 
     Args:
-        train_data:
-        train_labels:
-        test_data:
-        test_labels:
+        train_data: 2D vector of (x,y) position of scatter points for training data
+        train_labels: 1D vector of class label for each data point in training set
+        test_data: 2D vector of (x,y) position of scatter points for test data
+        test_labels: 1D vector of class label for each data point in test set
 
-    Returns:
-        Null
+    Returns: None
     """
 
-    # Put all data on cpu for plotting.
+    # Put all data on cpu for plotting - Device Agnostic Code.
     train_data, train_labels = train_data.to("cpu"), train_labels.to("cpu")
     test_data, test_labels = test_data.to("cpu"), test_labels.to("cpu")
 
     # Plot loss
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1,2,1)
     plt.scatter(train_data[:,0],train_data[:,1] , c=train_labels)
     plt.title("Train")
 
     # Plot accuracy
-    plt.subplot(1, 2, 2)
+    plt.subplot(1,2,2)
     plt.scatter(test_data[:, 0], test_data[:, 1], c=test_labels)
     plt.title("Test")
 
