@@ -290,7 +290,7 @@ def nonlin_type(nonlin_str):
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-class LinearRegressionModelV0(nn.Module):
+class SingleLayerLinearModel(nn.Module):
     """
     Defines class for A Linear Regression model with a single linear layer with
     'in_dim' weights and 1 bias parameter to fit a line in 'in_dim' dimensions.
@@ -310,7 +310,7 @@ class LinearRegressionModelV0(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.linear_layer1(x)
 
-class LinearRegressionModelV1(nn.Module):
+class ThreeLayerNonlinModel(nn.Module):
     """
     Defines class for a Linear Regression model with 3 linear layers and pointwise
     output non-linearities after input and hidden layers.
