@@ -60,6 +60,7 @@ def plot_loss(epoch, loss, test_loss=None, acc=None, test_acc=None, y_scale='lin
         plt.plot(epoch, test_loss, c='r', linestyle='-', label='Test Loss')
     if acc is not None:
         plt.plot(epoch, acc, c='b', linestyle='--', label='Train Accuracy')
+        plt.plot(epoch, np.ones_like(epoch), c='k', linestyle='--')
     if test_acc is not None:
         plt.plot(epoch, test_acc, c='r', linestyle='--', label='Test Accuracy')
     plt.yscale(y_scale)
@@ -148,3 +149,36 @@ def plot_decision_boundary(model: torch.nn.Module, X: torch.Tensor, y: torch.Ten
     plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.RdYlBu)
     plt.xlim(xx.min(), xx.max())
     plt.ylim(yy.min(), yy.max())
+
+
+def imshow_img(img):
+    """
+    Function to call plt.imshow on grayscale or color images . For grayscale images, squeeze out single dimension
+    before calling imshow. For color images, permute img dimensions to put color_chans last because imshow requires
+    that.
+
+    :args:
+        :img: - input image expected to be of dimension [C,H,W] where C is 1 (for gray) or 3 (for color)
+
+    :return: None
+    """
+
+    # for now, assuming color_chans is 1st dim of img. img.shape = {C,H,W}
+    color_chans = img.shape[0]
+
+    if color_chans == 3:
+        plt.imshow(img.permute([1,2,0])) # permute to put color channels last for imshow.
+    elif color_chans == 1:
+        plt.imshow(img.squeeze(),cmap='gray') # get rid of 1st dimension of tensor & plot gray image
+    else:
+        plt.imshow(img) # this will probably error as it is the unexpected case.
+
+
+def print_train_time(start: float,
+                     end: float,
+                     device: torch.device = None):
+    """Print difference between start and end time."""
+    total_time = end - start
+    print(f"Train time on {device}: {total_time:.3f} seconds.")
+
+    return total_time

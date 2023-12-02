@@ -3,6 +3,8 @@
 import torch
 from torch import nn
 
+from tqdm.auto import tqdm         # for progress bar
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 def train_step_multi_classification(data: torch.Tensor,
@@ -102,6 +104,142 @@ def test_step_multi_classification(data: torch.Tensor,
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+def train_step_batch_multi_classification(model: nn.Module,
+                                           dataloader: torch.utils.data.DataLoader,
+                                           optimizer: torch.optim.Optimizer,
+                                           loss_fn: nn.Module,
+                                           accuracy_fn,
+                                           device: torch.device = None,
+                                          verbose_model:bool = False):
+    """
+    Training step to train a multiclass classification model. Is called within training loop
+    over epochs and a loop over batches in dataloader as well.
+
+    :args:
+        :model: - torch model that will learn params on training data - nn.Module
+        :dataloader: - DataLoader iterable from torch.utils.data to feed in data by the batch.
+        :optimizer: - optimizer to perform gradient descent step. torch.optim.Optimizer
+        :loss_fn: - loss function used to compare model logits to ground truth labels
+            to perform backprop & gradient descent. nn.Module
+            Note: for multiclass classification problems, loss functions is nn.CrossEntropyLoss().
+        :accuracy_fn: -  proportion of model predicted classes that match ground truth
+        :device: - device that code is run on ("cuda" or "cpu")
+
+    :returns:
+        :train_loss: - average loss per batch across all batches in training dataset
+        :train_acc:  - average accuracy per batch across all batches in training dataset
+    """
+
+    # Put model in training mode to track gradients and update weights
+    model.train()
+
+    train_loss, train_acc = 0, 0
+
+    # Loop through batches
+    for batch, (X, y_labels) in enumerate(dataloader):
+        # Put data on target device
+        X, y_labels = X.to(device), y_labels.to(device)
+
+        # Forward pass
+        y_logits = model(X,verbose=verbose_model)
+
+        # calculate loss
+        loss = loss_fn(y_logits, y_labels)
+        train_loss += loss
+
+        # The Meat
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # compute accuracy
+        y_probs = torch.softmax(y_logits, dim=1)
+        y_preds = torch.argmax(y_probs, dim=1)
+        acc = accuracy_fn(y_preds, y_labels)
+        train_acc += acc
+
+    # Get average loss, acc per batch.
+    train_loss /= len(dataloader)
+    train_acc /= len(dataloader)
+
+    # Print whats happening
+    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.4f}")
+
+    return train_loss, train_acc
+
+
+
+
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def test_step_batch_multi_classification(model: nn.Module,
+                                          dataloader: torch.utils.data.DataLoader,
+                                          loss_fn: nn.Module,
+                                          accuracy_fn,
+                                          device: torch.device = None):
+    """
+    Compute loss and accuracy on test data without updating model params for multiclass
+    classification model. Called within training loop.
+
+    :args:
+        :model: - torch model that will learn params on training data - nn.Module
+        :dataloader: - DataLoader iterable from torch.utils.data to feed in data by the batch.
+        :loss_fn: - loss function used to compare model logits to ground truth labels
+            to perform backprop & gradient descent. nn.Module
+            Note: for multiclass classification problems, loss functions is nn.CrossEntropyLoss().
+        :accuracy_fn: -  proportion of model predicted classes that match ground truth
+        :device: - device that code is run on ("cuda" or "cpu")
+
+    :returns:
+        :test_loss: - average loss per batch across all batches in test dataset
+        :test_acc:  - average accuracy per batch across all batches in test dataset
+    """
+
+    # Put model in eval mode
+    model.eval()
+
+    test_loss, test_acc = 0, 0
+
+    # Put on inference mode context manager
+    with torch.inference_mode():
+        for batch, (X, y_labels) in enumerate(dataloader):
+            # Put data on device
+            X, y_labels = X.to(device), y_labels.to(device)
+
+            # Forward pass
+            y_logits = model(X)
+
+            # Compute loss
+            loss = loss_fn(y_logits, y_labels)
+            test_loss += loss
+
+            # compute accuracy
+            y_probs = torch.softmax(y_logits, dim=1)
+            y_preds = torch.argmax(y_probs, dim=1)
+            acc = accuracy_fn(y_preds, y_labels)
+            test_acc += acc
+
+        # Get average loss, acc per batch.
+        test_loss /= len(dataloader)
+        test_acc /= len(dataloader)
+
+    # Print whats happening
+    print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.4f}")
+
+    return test_loss, test_acc
+
+
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 def train_step_bin_classification(data: torch.Tensor,
                                   labels: torch.Tensor,
                                   model: nn.Module,
@@ -186,8 +324,6 @@ def test_step_bin_classification(data: torch.Tensor,
 
     return loss, acc
 
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 def train_step_regression(data: torch.Tensor,
@@ -264,6 +400,89 @@ def test_step_regression(data: torch.Tensor,
 
     return loss
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def eval_model_multi_classification(model: nn.Module,
+                                    dataloader: torch.utils.data.DataLoader,
+                                    loss_fn: nn.Module,
+                                    accuracy_fn,
+                                    device: torch.device = None):
+    """Returns dictionary containing results of model predicting on dataloader
+
+    :args:
+        :model: - torch model that will learn params on training data - nn.Module
+        :dataloader: - DataLoader iterable from torch.utils.data to feed in data by the batch.
+        :loss_fn: - loss function used to compare model logits to ground truth labels
+            to perform backprop & gradient descent. nn.Module
+            Note: for multiclass classification problems, loss functions is nn.CrossEntropyLoss().
+        :accuracy_fn: -  proportion of model predicted classes that match ground truth
+        :device: - device that code is run on ("cuda" or "cpu")
+
+    :returns: - dictionary containing...
+        "model_name" - name of model
+        "model_loss" - average loss per batch
+        "model_acc" - average accuracy per batch
+
+    """
+
+    print(f"Eval model {model.__class__.__name__} on dataset {dataloader.dataset}")
+
+    loss, acc = 0, 0
+    model.eval()
+    with torch.inference_mode():
+        for X, y_labels in tqdm(dataloader):
+            # Put data on device (device agnostic code)
+            X, y_labels = X.to(device), y_labels.to(device)
+
+            # Make predictions
+            y_logits = model(X)
+
+            # Accumulate loss and accuracy per batch
+            loss += loss_fn(y_logits, y_labels)
+            acc += accuracy_fn(y_logits.argmax(dim=1), y_labels)
+
+        # Divide loss and accuracy by number of batches to get average per batch.
+        loss /= len(dataloader)
+        acc /= len(dataloader)
+
+        return {"model_name": model.__class__.__name__,
+                "model_loss": loss.item(),
+                "model_acc": acc.item()}
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def make_predictions_multi_classification(model: nn.Module,
+                                          data: list):
+    """
+        Function to output list of prediction probability tensors, one for each sample in data.
+        Predictions made by model.
+
+        :args:
+            :model: - trained model to use to make predictions
+            :data: - list of input images
+
+        :returns:
+            :pred_probs: - list of vector of prediction probabilities for all classes for each input image
+    """
+
+    pred_probs = []
+
+    model.eval()
+    with torch.inference_mode():
+        for img in data:
+            # Forward pass, model outputs raw logits
+            y_logit = model(img.unsqueeze(0))
+
+            # Convert logits -> prediction probabilities
+            y_prob = y_logit.softmax(dim=1)
+
+            pred_probs.append(y_prob)
+
+    return pred_probs
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 def nonlin_type(nonlin_str):
     """
     Function to return a non-linear nn.Module from a user provided string input.
@@ -310,25 +529,29 @@ class SingleLayerLinearModel(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.linear_layer1(x)
 
-class ThreeLayerNonlinModel(nn.Module):
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+class ThreeLayerModel(nn.Module):
     """
     Defines class for a Linear Regression model with 3 linear layers and pointwise
     output non-linearities after input and hidden layers.
+    Note: this model is functionally identical to and interchangeable with ThreeLayerNonlinModel2.
 
     :args:
         :in_dim: - number of dimensions for independent variable (X)
         :hid_dim: - number of hidden nodes in 2nd linear layer
+        :out_dim: - number of outputs, default = 1 for regression
         :nl_type: str indicating non-linearity type (relu, sigmoid, tanh, etc.)
         :x: - independent variables. [NxD] torch.Tensor
 
     :returns:
         :y_logit: - model predictions for 1D dependent variable (y). [1xD] torch.Tensor
     """
-    def __init__(self, in_dim: int, hid_dim: int, nl_type: str):
+    def __init__(self, in_dim: int, hid_dim: int, out_dim: int = 1, nl_type: str = None):
         super().__init__()
         self.linear_layer1 = nn.Linear(in_features=in_dim, out_features=hid_dim)
         self.linear_layer2 = nn.Linear(in_features=hid_dim, out_features=hid_dim)
-        self.linear_layer3 = nn.Linear(in_features=hid_dim, out_features=1)
+        self.linear_layer3 = nn.Linear(in_features=hid_dim, out_features=out_dim)
 
         self.nl = nonlin_type(nl_type)
 
@@ -339,17 +562,19 @@ class ThreeLayerNonlinModel(nn.Module):
         return self.linear_layer3(z)
 
 
-class MultiClassificationModelV0(nn.Module):
-    def __init__(self, in_dim:int, out_dim:int, hid_dim:int=8, nonlin=None):
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+class ThreeLayerModel2(nn.Module):
+    def __init__(self, in_dim: int, out_dim: int, hid_dim: int = 8, nl_type: str = None):
         """
         Defines class of Model for Multi-class Classification that has linear layers with the
         potential for pointwise non-linearity activation functions between the layers.
+        Note: this model is functionally identical to and interchangeable with ThreeLayerNonlinModel.
 
         :args:
             :in_dim (int): number input features to model
             :out_dim (int): number input features to model (number of output classes)
             :hid_dim (int): number of hidden units between layers, default 8
-            :nonlin (str): indicates type of non-linearity after layers 1 & 2, default None
+            :nl_type (str): indicates type of non-linearity after layers 1 & 2, default None
             :x: - input to model
 
         :returns:
@@ -361,11 +586,89 @@ class MultiClassificationModelV0(nn.Module):
         super().__init__()
         self.linear_layer_stack = nn.Sequential(
             nn.Linear(in_features=in_dim, out_features=hid_dim),
-            nonlin_type(nonlin),
+            nonlin_type(nl_type),
             nn.Linear(in_features=hid_dim, out_features=hid_dim),
-            nonlin_type(nonlin),
+            nonlin_type(nl_type),
             nn.Linear(in_features=hid_dim, out_features=out_dim),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.linear_layer_stack(x)
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+class TinyVGG_CIFAR(nn.Module):
+    """
+    Replicate TinyVGG from CNN Explainer website - https://poloclub.github.io/cnn-explainer/
+    To apply it to multiclass classification on CIFAR dataset.
+
+    Network has 2 convolution blocks (Conv2d -> Relu -> Conv2d -> Relu -> MaxPool)
+        followed by 1 classifier block, which is just a linear layer.
+
+    :args:
+        :input_shape: (int) -
+        :hidden_units: (int) -
+        :output_shape: (int) -
+        :x: (Tensor) - input image of shape [batch, colorchans, height, width]
+        :verbose: (bool) - Flag to enter verbose mode and print out shape of data after each block
+
+    :returns:
+        :y_logits: (Tensor) - raw outputs from model must be converted into probs (by softmax) and preds (by argmax)
+    """
+
+    def __init__(self,
+                 input_shape: int,
+                 hidden_units: int,
+                 output_shape: int):
+        #
+        super().__init__()
+        #
+        self.conv_block1 = nn.Sequential(
+            nn.Conv2d(in_channels=input_shape,
+                      out_channels=hidden_units,
+                      kernel_size=3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_units,
+                      out_channels=hidden_units,
+                      kernel_size=3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        #
+        self.conv_block2 = nn.Sequential(
+            nn.Conv2d(in_channels=hidden_units,
+                      out_channels=hidden_units,
+                      kernel_size=3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_units,
+                      out_channels=hidden_units,
+                      kernel_size=3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        #
+        self.classifier_block = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=hidden_units * 8 * 8,
+                      out_features=output_shape)
+        )
+
+    def forward(self, x: torch.Tensor, verbose: bool = False) -> torch.Tensor:
+
+        x = self.conv_block1(x)
+        if verbose: print(f"After conv_block1, shape is: {x.shape}")
+        x = self.conv_block2(x)
+        if verbose: print(f"After conv_block2, shape is: {x.shape}")
+        x = self.classifier_block(x)
+        if verbose: print(f"After classifier_block, shape is: {x.shape}")
+
+        return x
+
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
