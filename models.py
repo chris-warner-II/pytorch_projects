@@ -105,11 +105,11 @@ def test_step_multi_classification(data: torch.Tensor,
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 def train_step_batch_multi_classification(model: nn.Module,
-                                           dataloader: torch.utils.data.DataLoader,
-                                           optimizer: torch.optim.Optimizer,
-                                           loss_fn: nn.Module,
-                                           accuracy_fn,
-                                           device: torch.device = None,
+                                          dataloader: torch.utils.data.DataLoader,
+                                          optimizer: torch.optim.Optimizer,
+                                          loss_fn: nn.Module,
+                                          accuracy_fn,
+                                          device: torch.device = None,
                                           verbose_model:bool = False):
     """
     Training step to train a multiclass classification model. Is called within training loop
@@ -178,10 +178,10 @@ def train_step_batch_multi_classification(model: nn.Module,
 
 
 def test_step_batch_multi_classification(model: nn.Module,
-                                          dataloader: torch.utils.data.DataLoader,
-                                          loss_fn: nn.Module,
-                                          accuracy_fn,
-                                          device: torch.device = None):
+                                         dataloader: torch.utils.data.DataLoader,
+                                         loss_fn: nn.Module,
+                                         accuracy_fn,
+                                         device: torch.device = None):
     """
     Compute loss and accuracy on test data without updating model params for multiclass
     classification model. Called within training loop.
@@ -509,6 +509,27 @@ def nonlin_type(nonlin_str):
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+def count_up_params(model):
+    """
+    Count up the number of parameters in all layers of a given model.
+
+    :args:
+        :model:
+
+    :returns:
+        :num_params:
+    """
+
+    num_params = 0
+    for p in model.parameters():
+        num_params += p.numel()
+
+    print(f"Number of parameters in model: {num_params}")
+
+    return num_params
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 class SingleLayerLinearModel(nn.Module):
     """
     Defines class for A Linear Regression model with a single linear layer with
@@ -608,6 +629,7 @@ class TinyVGG_CIFAR(nn.Module):
         :input_shape: (int) -
         :hidden_units: (int) -
         :output_shape: (int) -
+        :linear_scaler: (int) - defines size of last linear layer in classifier block. Defaults to 8 for CIFAR.
         :x: (Tensor) - input image of shape [batch, colorchans, height, width]
         :verbose: (bool) - Flag to enter verbose mode and print out shape of data after each block
 
@@ -618,7 +640,8 @@ class TinyVGG_CIFAR(nn.Module):
     def __init__(self,
                  input_shape: int,
                  hidden_units: int,
-                 output_shape: int):
+                 output_shape: int,
+                 linear_scaler: int = 8):
         #
         super().__init__()
         #
@@ -656,7 +679,7 @@ class TinyVGG_CIFAR(nn.Module):
         #
         self.classifier_block = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=hidden_units * 8 * 8,
+            nn.Linear(in_features=hidden_units * linear_scaler * linear_scaler,
                       out_features=output_shape)
         )
 
